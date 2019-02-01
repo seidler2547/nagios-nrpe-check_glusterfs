@@ -84,12 +84,7 @@ if ! pidof glusterfsd &>/dev/null; then
 fi
 
 # get volume heal status
-heal=0
-for entries in $(sudo gluster volume heal ${VOLUME} info | awk '/^Number of entries: /{print $4}'); do
-	if [ "$entries" -gt 0 ]; then
-		let $((heal+=entries))
-	fi
-done
+heal="$(sudo gluster volume heal ${VOLUME} statistics heal-count | awk 'BEGIN{total=0} /^Number of entries: /{total+=$4} END{print total}')"
 if [ "$heal" -gt 0 ]; then
 	errors=("${errors[@]}" "$heal unsynched entries")
 fi
@@ -159,7 +154,7 @@ if [ -n "$errors" ]; then
 	sep='; '
 	msg=$(printf "${sep}%s" "${errors[@]}")
 	msg=${msg:${#sep}}
-	if [ ${ex_stat} == "CRITICAL_stat" ]; then
+	if [ "${ex_stat}" = "CRITICAL_stat" ]; then
 		Exit CRITICAL "${msg}"
 	else
 		Exit WARNING "${msg}"
